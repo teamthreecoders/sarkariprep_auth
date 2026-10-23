@@ -56,7 +56,8 @@ class JWTConfig:
     OTP_EXPIRE_MINUTES:int = int(os.environ.get("JWTOTPTOKENEXPIRATIONMINUTES", 30))
     REFRESH_TOKEN_EXPIRE_MINUTES:int = int(os.environ.get("JWTREFRESHTOKENEXPIRATIONMINUTES", 43200))  # 30 days
 
-EMAIL_VERIFICATION_BASEURL ='https://apiauthsarkariprep.vercel.app/pages/auth'
+EMAIL_VERIFICATION_BASEURL = os.environ.get("EMAILVERIFICATIONBASEURL", "http://localhost:5173/verify-email")
+CORS_ALLOWED_ORIGINS = os.environ.get("CORS_ALLOWED_ORIGINS", "http://localhost:5173")
 
 # allowed Token Purpose
 class AllowedTokenPurpose(StrEnum):
