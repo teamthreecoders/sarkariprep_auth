@@ -1,0 +1,62 @@
+fastapi-app/
+│
+├── app/
+│   ├── main.py
+│   │
+│   ├── api/
+│   │   ├── v1/
+│   │   │   ├── endpoints/
+│   │   │   │   ├── auth.py
+│   │   │   │   ├── users.py
+│   │   │   │   ├── health.py
+│   │   │   │   └── items.py
+│   │   │   │
+│   │   │   └── api.py
+│   │   │
+│   │   └── deps.py
+│   │
+│   ├── core/
+│   │   ├── config.py done
+│   │   ├── security.py done
+│   │   ├── database.py done
+│   │   └── logger.py done
+│   │
+│   ├── models/
+│   │   ├── user.py not
+│   │   └── item.py not
+│   │
+│   ├── schemas/
+│   │   ├── user.py
+│   │   ├── auth.py
+│   │   └── item.py
+│   │
+│   ├── services/
+│   │   ├── auth_service.py done
+│   │   ├── user_service.py
+│   │   └── token_service.py
+│   │
+│   ├── repositories/
+│   │   ├── user_repository.py
+│   │   └── item_repository.py
+│   │
+│   ├── middleware/
+│   │   ├── auth_middleware.py
+│   │   └── logging_middleware.py
+│   │
+│   ├── utils/
+│   │   ├── hashing.py
+│   │   ├── validators.py
+│   │   └── helpers.py
+│   │
+│   └── tests/
+│       ├── test_auth.py
+│       └── test_users.py
+│
+├── alembic/
+│
+├── requirements.txt
+├── .env
+├── Dockerfile
+├── docker-compose.yml
+├── README.md
+└── .gitignore

@@ -1,0 +1,35 @@
+TODO::
+
+1. Pydantic
+2. Custom HTTPS Exception
+3. Proper Response Format
+4. Code base restructuring
+
+
+
+Response payload
+{
+  "msg": "",
+  "success": true,
+  "code": 200,
+  "error": null,
+  "data": {}
+}
+
+
+data
+-- Token for Action like (2fa, login, OTP)
+
+data:{
+"action_token":
+"purpose":<>
+}
+
+-- session token
+data:{
+token:
+}
+
+
+
+

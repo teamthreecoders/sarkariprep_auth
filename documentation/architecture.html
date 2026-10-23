@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AuthDemo — Project Architecture</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #020817; --surface: #0c1929; --surface2: #0d1f35;
+      --border: #1e3a58; --green: #22c55e; --green-l: #4ade80;
+      --green-dim: #0d2e1a; --blue: #60a5fa; --amber: #fbbf24;
+      --red: #f87171; --purple: #a78bfa; --text: #f1f5f9;
+      --muted: #94a3b8; --faint: #475569; --nav-w: 228px;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      display: flex; min-height: 100vh;
+      -webkit-font-smoothing: antialiased; overflow-x: hidden;
+    }
+
+    /* ── BG Orbs ── */
+    .bg-orb {
+      position: fixed; border-radius: 50%;
+      filter: blur(100px); pointer-events: none; z-index: 0;
+    }
+    .orb1 { width:500px;height:500px; background:#22c55e; opacity:.04; top:-100px; left:-100px; animation: drift1 25s ease-in-out infinite; }
+    .orb2 { width:400px;height:400px; background:#60a5fa; opacity:.04; bottom:-100px; right:-100px; animation: drift2 30s ease-in-out infinite; }
+    .orb3 { width:300px;height:300px; background:#a78bfa; opacity:.03; top:50%; left:50%; animation: drift3 20s ease-in-out infinite; }
+    @keyframes drift1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(60px,-80px)} }
+    @keyframes drift2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-80px,60px)} }
+    @keyframes drift3 { 0%,100%{transform:translate(-50%,-50%)} 50%{transform:translate(-40%,-60%)} }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: var(--nav-w); background: var(--surface);
+      border-right: 1px solid var(--border);
+      position: fixed; top:0; left:0; bottom:0;
+      overflow-y: auto; z-index: 10; padding: 24px 0 40px;
+    }
+    .sidebar-logo { padding: 0 18px 20px; border-bottom: 1px solid var(--border); margin-bottom: 14px; }
+    .logo-text { font-size: 17px; font-weight: 800; color: var(--text); letter-spacing: -0.3px; }
+    .logo-text span { color: var(--green); }
+    .logo-sub { font-size: 10px; color: var(--faint); margin-top: 2px; letter-spacing:.05em; }
+    .nav-group { font-size: 10px; font-weight: 700; color: var(--faint); letter-spacing:.08em; text-transform: uppercase; padding: 10px 18px 5px; }
+    .nav-link {
+      display: flex; align-items: center; gap: 7px; padding: 7px 18px;
+      font-size: 12px; color: var(--muted); text-decoration: none;
+      border-left: 2px solid transparent; transition: all .15s;
+    }
+    .nav-link:hover { color: var(--text); background: var(--surface2); }
+    .nav-link.active { color: var(--green-l); border-left-color: var(--green); background: var(--green-dim); }
+    .nav-dot { width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0; }
+
+    /* ── Main ── */
+    main { margin-left: var(--nav-w); flex: 1; padding: 0 40px 100px; max-width: 1060px; position: relative; z-index: 1; }
+
+    section { padding-top: 72px; }
+
+    /* ── Scroll animations ── */
+    .reveal {
+      opacity: 0; transform: translateY(28px);
+      transition: opacity .65s cubic-bezier(.22,1,.36,1), transform .65s cubic-bezier(.22,1,.36,1);
+    }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+    .reveal-left { opacity:0; transform:translateX(-28px); transition: opacity .6s ease, transform .6s ease; }
+    .reveal-left.visible { opacity:1; transform:translateX(0); }
+
+    /* ── Section header ── */
+    .section-label {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: var(--green-dim); border: 1px solid var(--border);
+      border-radius: 99px; padding: 4px 13px;
+      font-size: 10px; font-weight: 700; color: var(--green-l);
+      letter-spacing: .07em; text-transform: uppercase; margin-bottom: 10px;
+    }
+    h2 { font-size: 26px; font-weight: 800; color: var(--text); letter-spacing: -.5px; margin-bottom: 6px; }
+    .section-desc { font-size: 13px; color: var(--muted); line-height: 1.7; margin-bottom: 28px; max-width: 620px; }
+
+    /* ── Hero ── */
+    .hero { padding-top: 60px; padding-bottom: 48px; border-bottom: 1px solid var(--border); }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--green-dim); border: 1px solid #166534;
+      border-radius: 99px; padding: 4px 12px;
+      font-size: 11px; font-weight: 600; color: var(--green-l); margin-bottom: 18px;
+    }
+    .live-dot { width:6px;height:6px;border-radius:50%;background:var(--green); animation: pulse 2s ease infinite; }
+    @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,.4)} 50%{box-shadow:0 0 0 6px rgba(34,197,94,0)} }
+    .hero h1 {
+      font-size: 44px; font-weight: 900; color: var(--text);
+      letter-spacing: -1.2px; line-height: 1.1; margin-bottom: 14px;
+      animation: heroIn .8s cubic-bezier(.22,1,.36,1) both;
+    }
+    .hero h1 span { color: var(--green); }
+    @keyframes heroIn { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+    .hero p { font-size: 14px; color: var(--muted); line-height: 1.7; max-width: 520px; margin-bottom: 22px; animation: heroIn .8s .1s cubic-bezier(.22,1,.36,1) both; }
+    .hero-url {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 7px 13px; font-family: monospace;
+      font-size: 12px; color: var(--blue); text-decoration: none; margin-bottom: 24px;
+      transition: border-color .2s; animation: heroIn .8s .2s cubic-bezier(.22,1,.36,1) both;
+    }
+    .hero-url:hover { border-color: var(--blue); }
+    .tech-stack { display: flex; flex-wrap: wrap; gap: 7px; animation: heroIn .8s .3s cubic-bezier(.22,1,.36,1) both; }
+    .tech-badge {
+      display: flex; align-items: center; gap: 5px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 7px; padding: 5px 10px;
+      font-size: 11px; font-weight: 600; color: var(--muted);
+      transition: border-color .2s, color .2s;
+    }
+    .tech-badge:hover { border-color: var(--green); color: var(--text); }
+    .tech-badge .dot { width:6px;height:6px;border-radius:50%; }
+
+    /* ── Stats ── */
+    .stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 8px; }
+    .stat-card {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 12px; padding: 18px 16px; text-align: center;
+      transition: border-color .2s, transform .2s;
+    }
+    .stat-card:hover { border-color: var(--green); transform: translateY(-2px); }
+    .stat-num { font-size: 32px; font-weight: 900; color: var(--green-l); letter-spacing: -1px; line-height: 1; }
+    .stat-label { font-size: 11px; color: var(--faint); margin-top: 5px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+
+    /* ── Arch layer diagram ── */
+    .arch-diagram { display: flex; flex-direction: column; align-items: center; gap: 0; margin: 28px 0; }
+    .arch-row { display: flex; align-items: stretch; gap: 10px; width: 100%; justify-content: center; }
+    .arch-box {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 12px; padding: 13px 16px; flex: 1; max-width: 195px;
+      text-align: center; transition: border-color .2s, transform .2s, box-shadow .2s;
+      cursor: default;
+    }
+    .arch-box:hover { border-color: var(--green); transform: translateY(-3px); box-shadow: 0 8px 24px rgba(34,197,94,.1); }
+    .arch-box.hl { border-color: rgba(34,197,94,.4); }
+    .arch-box.hl-blue { border-color: rgba(96,165,250,.4); }
+    .arch-box-icon { font-size: 20px; margin-bottom: 5px; display: block; }
+    .arch-box-label { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+    .arch-box-sub { font-size: 10px; color: var(--faint); line-height: 1.4; }
+    .arch-box-files { margin-top: 7px; font-size: 9px; color: var(--green-l); font-family: monospace; line-height: 1.7; }
+    .arch-arrow { display: flex; align-items: center; justify-content: center; color: var(--faint); font-size: 14px; height: 20px; margin: 2px 0; }
+    .arch-arrow-label { font-size: 10px; color: var(--faint); margin-left: 6px; }
+    .arch-arrow-h { display: flex; align-items: center; color: var(--faint); font-size: 12px; padding: 0 3px; }
+    .side-row { display: flex; gap: 8px; margin-top: 20px; flex-wrap: wrap; justify-content: center; }
+    .side-pill {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 8px 12px; text-align: center;
+      transition: border-color .2s;
+    }
+    .side-pill:hover { border-color: var(--border); }
+    .side-pill-label { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 3px; }
+    .side-pill-sub { font-size: 10px; color: var(--faint); font-family: monospace; line-height: 1.5; }
+
+    /* ══════════════════════════════════════════
+       FILE TREE — graphical interactive
+    ══════════════════════════════════════════ */
+    .ftree-wrap {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 16px; overflow: hidden; user-select: none;
+    }
+    .ftree-titlebar {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--surface); padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .ftree-dot { width:10px;height:10px;border-radius:50%; }
+    .ftree-dot.r{background:#f87171} .ftree-dot.y{background:#fbbf24} .ftree-dot.g{background:#22c55e}
+    .ftree-title { font-size: 11px; color: var(--faint); font-family: monospace; margin-left: 6px; }
+    .ftree-body { padding: 10px 0; }
+
+    /* ── Node ── */
+    .fn { position: relative; }
+
+    /* ── Row ── */
+    .fr {
+      display: flex; align-items: center; gap: 0;
+      padding: 4px 0; cursor: pointer; transition: background .12s;
+      position: relative;
+    }
+    .fr:hover { background: rgba(30,58,88,.45); }
+    .fr:hover .fdesc-inline { opacity: 1; }
+
+    /* ── Indent spacer — creates tree lines ── */
+    .fi {
+      display: flex; align-items: center;
+      flex-shrink: 0;
+    }
+    .fi-seg {
+      width: 20px; height: 100%; flex-shrink: 0;
+      border-left: 1px solid rgba(30,58,88,.7);
+      margin-left: 10px;
+    }
+    .fi-seg.last::after {
+      content: '';
+      display: block; width: 9px; height: 1px;
+      background: rgba(30,58,88,.7);
+      margin-top: 14px;
+    }
+
+    /* ── Chevron ── */
+    .fchev {
+      width: 16px; height: 16px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; color: var(--faint);
+      transition: transform .2s; margin-right: 2px;
+    }
+    .fn.open > .fr .fchev { transform: rotate(90deg); }
+
+    /* ── Icon ── */
+    .fic {
+      width: 16px; height: 16px; border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px; font-weight: 800; flex-shrink: 0; margin-right: 7px;
+    }
+    .fic.dir  { background:#0c1f40; color:#60a5fa; letter-spacing:0; }
+    .fic.py   { background:#0d2e1a; color:#4ade80; }
+    .fic.html { background:#1c1200; color:#fbbf24; }
+    .fic.md   { background:#1a0a2e; color:#c4b5fd; }
+    .fic.cfg  { background:#1a1a2e; color:#94a3b8; }
+
+    /* ── Name ── */
+    .fn-name { font-size: 12px; font-family: monospace; flex-shrink: 0; }
+    .fn-name.dir-name { color: var(--blue); font-weight: 700; }
+    .fn-name.py-name  { color: #dbeafe; }
+    .fn-name.html-name{ color: var(--amber); }
+    .fn-name.md-name  { color: #ddd6fe; }
+    .fn-name.cfg-name { color: var(--muted); }
+
+    /* ── Inline description ── */
+    .fdesc-inline {
+      font-size: 10px; color: var(--faint); margin-left: 10px;
+      opacity: 0; transition: opacity .2s; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis; max-width: 260px;
+    }
+
+    /* ── Children container ── */
+    .fchildren {
+      overflow: hidden; max-height: 0;
+      transition: max-height .35s cubic-bezier(.22,1,.36,1);
+    }
+    .fn.open > .fchildren { max-height: 3000px; }
+
+    /* ── File type badge ── */
+    .ftype {
+      margin-left: auto; margin-right: 14px;
+      font-size: 9px; font-weight: 700; padding: 1px 6px;
+      border-radius: 3px; flex-shrink: 0; opacity: .7;
+    }
+    .ftype.py   { background:#0d2e1a; color:#4ade80; }
+    .ftype.html { background:#1c1200; color:#fbbf24; }
+    .ftype.md   { background:#1a0a2e; color:#c4b5fd; }
+    .ftype.cfg  { background:#1a1a2e; color:#94a3b8; }
+
+    /* ── Endpoints ── */
+    .ep-group-title {
+      font-size: 11px; font-weight: 700; color: var(--faint);
+      text-transform: uppercase; letter-spacing: .07em;
+      margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+    }
+    .ep-group-title::after { content:''; flex:1; height:1px; background:var(--border); }
+    .ep-card {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 12px; margin-bottom: 8px; overflow: hidden;
+      transition: border-color .2s;
+    }
+    .ep-card:hover { border-color: rgba(34,197,94,.3); }
+    .ep-head { display:flex;align-items:center;gap:10px;padding:13px 16px;cursor:pointer; }
+    .method {
+      font-size: 10px; font-weight: 800; letter-spacing: .05em;
+      padding: 3px 9px; border-radius: 5px; font-family: monospace;
+      min-width: 54px; text-align: center;
+    }
+    .m-POST   { background:#0d2e1a;color:#4ade80;border:1px solid #166534; }
+    .m-GET    { background:#0c1f40;color:#60a5fa;border:1px solid #1e3a58; }
+    .m-DELETE { background:#2d0a0a;color:#f87171;border:1px solid #7f1d1d; }
+    .ep-path { font-family:monospace;font-size:12px;font-weight:600;color:var(--text);flex:1; }
+    .ep-desc { font-size:11px;color:var(--faint); }
+    .sbadge { font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px; }
+    .s201{background:#0d2e1a;color:#4ade80} .s200{background:#0c1f40;color:#60a5fa}
+    .s202{background:#1c1200;color:#fbbf24}
+    .ep-body { border-top:1px solid var(--border);padding:12px 16px;display:none;animation:fadeDown .2s ease; }
+    .ep-body.open { display:block; }
+    @keyframes fadeDown { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+    .ep-body p { font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:10px; }
+    .info-grid { display:grid;grid-template-columns:1fr 1fr;gap:10px; }
+    .info-block { background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px; }
+    .info-block-title { font-size:9px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px; }
+    .info-block code { display:block;font-family:monospace;font-size:10px;color:var(--green-l);line-height:1.9; }
+    .err-list { display:flex;flex-wrap:wrap;gap:5px;margin-top:6px; }
+    .eb { font-size:10px;padding:2px 7px;border-radius:4px;font-weight:600; }
+    .e401{background:#1a0505;color:#f87171} .e404{background:#1c1200;color:#fbbf24}
+    .e409{background:#0c1f40;color:#60a5fa} .e422{background:#1a0a1a;color:#c4b5fd}
+    .e500{background:#111;color:#94a3b8}
+
+    /* ── Database ── */
+    .db-grid { display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px; }
+    .db-card { background:var(--surface2);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:border-color .2s; }
+    .db-card:hover { border-color:rgba(96,165,250,.3); }
+    .db-head { padding:11px 15px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px; }
+    .db-schema { font-family:monospace;font-size:12px;font-weight:700;color:var(--text); }
+    .db-type { font-size:9px;padding:2px 7px;border-radius:4px;font-weight:600;margin-left:auto; }
+    .t-table{background:#0d2e1a;color:#4ade80} .t-view{background:#0c1f40;color:#60a5fa}
+    .db-items { padding:8px 14px; }
+    .db-item { display:flex;align-items:flex-start;gap:7px;padding:5px 0;border-bottom:1px solid rgba(30,58,88,.5);font-size:11px; }
+    .db-item:last-child{border-bottom:none}
+    .db-item-name{font-family:monospace;color:var(--text);font-weight:600;min-width:160px;flex-shrink:0}
+    .db-item-desc{color:var(--faint);font-size:10px;line-height:1.5}
+    .pk{color:var(--amber);font-size:9px;font-weight:700} .fk{color:var(--blue);font-size:9px;font-weight:700}
+
+    /* ── Response shape ── */
+    .shape-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}
+    .shape-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:15px}
+    .shape-card h4{font-size:10px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px}
+    .shape-card pre{font-family:monospace;font-size:11px;line-height:1.9;color:var(--muted)}
+    .k{color:var(--blue)} .vs{color:var(--green-l)} .vb{color:var(--amber)} .vn{color:var(--red)}
+
+    /* ── Flows ── */
+    .flow-steps { border-left:2px solid var(--border); margin-left:10px; }
+    .flow-step { display:flex;gap:14px;padding:0 0 22px 22px;position:relative; }
+    .flow-step::before { content:'';position:absolute;left:-7px;top:5px;width:12px;height:12px;border-radius:50%;background:var(--green);border:2px solid var(--bg); }
+    .flow-step.s-email::before{background:var(--amber)} .flow-step.s-db::before{background:var(--blue)} .flow-step.s-end::before{background:var(--purple)}
+    .step-num{background:var(--green-dim);border:1px solid var(--border);border-radius:5px;padding:2px 7px;font-size:10px;font-weight:700;color:var(--green-l);height:fit-content;flex-shrink:0}
+    .flow-step.s-email .step-num{background:#1c1200;color:var(--amber)} .flow-step.s-db .step-num{background:#0c1f40;color:var(--blue)} .flow-step.s-end .step-num{background:#1a0a2e;color:#c4b5fd}
+    .step-title{font-size:12px;font-weight:700;color:var(--text);margin-bottom:3px}
+    .step-desc{font-size:11px;color:var(--faint);line-height:1.6}
+    .step-code{margin-top:5px;font-family:monospace;font-size:10px;color:var(--green-l);background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:5px 9px}
+
+    .divider{height:1px;background:var(--border);margin:52px 0}
+
+    @media(max-width:860px){
+      body{flex-direction:column}
+      .sidebar{position:static;width:100%;border-right:none;border-bottom:1px solid var(--border)}
+      main{margin-left:0;padding:0 16px 60px}
+      .db-grid,.shape-grid,.info-grid,.stats-grid{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+
+<!-- BG orbs -->
+<div class="bg-orb orb1"></div>
+<div class="bg-orb orb2"></div>
+<div class="bg-orb orb3"></div>
+
+<!-- ── Sidebar ── -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-text">Auth<span>Demo</span></div>
+    <div class="logo-sub">Architecture Reference</div>
+  </div>
+  <div class="nav-group">Project</div>
+  <a href="#overview"    class="nav-link active"><span class="nav-dot"></span> Overview</a>
+  <a href="#stats"       class="nav-link"><span class="nav-dot"></span> Stats</a>
+  <div class="nav-group">Architecture</div>
+  <a href="#layers"      class="nav-link"><span class="nav-dot"></span> Layer Diagram</a>
+  <a href="#files"       class="nav-link"><span class="nav-dot"></span> File Explorer</a>
+  <div class="nav-group">API</div>
+  <a href="#endpoints"   class="nav-link"><span class="nav-dot"></span> Endpoints</a>
+  <a href="#response"    class="nav-link"><span class="nav-dot"></span> Response Shape</a>
+  <div class="nav-group">Database</div>
+  <a href="#database"    class="nav-link"><span class="nav-dot"></span> Schemas & Tables</a>
+  <div class="nav-group">Flows</div>
+  <a href="#flow-signup" class="nav-link"><span class="nav-dot"></span> Signup</a>
+  <a href="#flow-login"  class="nav-link"><span class="nav-dot"></span> Login 2FA</a>
+  <a href="#flow-reset"  class="nav-link"><span class="nav-dot"></span> Forgot Password</a>
+</nav>
+
+<main>
+
+<!-- ── Hero ── -->
+<section id="overview">
+  <div class="hero">
+    <div class="hero-badge"><span class="live-dot"></span> Live on Vercel</div>
+    <h1>Auth<span>Demo</span><br>Architecture</h1>
+    <p>Production-ready FastAPI authentication service — OTP 2FA, JWT tokens, email verification, argon2 password hashing, PostgreSQL on NeonDB.</p>
+    <a href="https://authentication-five-indol.vercel.app" target="_blank" class="hero-url">&#127760; https://authentication-five-indol.vercel.app</a>
+    <div class="tech-stack">
+      <div class="tech-badge"><span class="dot" style="background:#22c55e"></span>FastAPI 0.136</div>
+      <div class="tech-badge"><span class="dot" style="background:#60a5fa"></span>Uvicorn ASGI</div>
+      <div class="tech-badge"><span class="dot" style="background:#a78bfa"></span>Pydantic v2</div>
+      <div class="tech-badge"><span class="dot" style="background:#22c55e"></span>NeonDB PostgreSQL</div>
+      <div class="tech-badge"><span class="dot" style="background:#fbbf24"></span>PyJWT HS256</div>
+      <div class="tech-badge"><span class="dot" style="background:#f87171"></span>Argon2</div>
+      <div class="tech-badge"><span class="dot" style="background:#94a3b8"></span>aiosmtplib</div>
+      <div class="tech-badge"><span class="dot" style="background:#22c55e"></span>Python 3.12</div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Stats ── -->
+<section id="stats">
+  <div class="reveal">
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-num" data-count="9">0</div><div class="stat-label">API Endpoints</div></div>
+      <div class="stat-card"><div class="stat-num" data-count="5">0</div><div class="stat-label">DB Tables</div></div>
+      <div class="stat-card"><div class="stat-num" data-count="4">0</div><div class="stat-label">DB Views</div></div>
+      <div class="stat-card"><div class="stat-num" data-count="60">0</div><div class="stat-label">Test Cases</div></div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── Layer Diagram ── -->
+<section id="layers">
+  <div class="section-label">&#9881;&#65039; Architecture</div>
+  <h2>Layer Diagram</h2>
+  <p class="section-desc">Requests travel strictly top-down. No layer ever skips another. Each layer has exactly one responsibility.</p>
+
+  <div class="arch-diagram">
+    <div class="arch-row reveal" style="transition-delay:.0s">
+      <div class="arch-box hl" style="max-width:280px;">
+        <span class="arch-box-icon">&#128100;</span>
+        <div class="arch-box-label">Client</div>
+        <div class="arch-box-sub">Browser · Mobile · API consumer</div>
+      </div>
+    </div>
+    <div class="arch-arrow reveal" style="transition-delay:.05s">&#8595; <span class="arch-arrow-label">HTTP Request + JSON body</span></div>
+
+    <div class="arch-row reveal" style="transition-delay:.1s">
+      <div class="arch-box" style="max-width:400px;">
+        <span class="arch-box-icon">&#128640;</span>
+        <div class="arch-box-label">Routes Layer</div>
+        <div class="arch-box-sub">FastAPI path operations · Pydantic validation · auth_token_validate dependency</div>
+        <div class="arch-box-files">routes/v1/auth.py &nbsp;·&nbsp; handler.py &nbsp;·&nbsp; schemas/</div>
+      </div>
+    </div>
+    <div class="arch-arrow reveal" style="transition-delay:.15s">&#8595; <span class="arch-arrow-label">Validated payload + DB connection</span></div>
+
+    <div class="arch-row reveal" style="transition-delay:.2s">
+      <div class="arch-box">
+        <span class="arch-box-icon">&#9881;&#65039;</span>
+        <div class="arch-box-label">AuthServices</div>
+        <div class="arch-box-sub">signup · login · 2fa · reset</div>
+        <div class="arch-box-files">services/auth.py</div>
+      </div>
+      <div class="arch-arrow-h">&#8644;</div>
+      <div class="arch-box">
+        <span class="arch-box-icon">&#128273;</span>
+        <div class="arch-box-label">TokenService</div>
+        <div class="arch-box-sub">JWT create / validate</div>
+        <div class="arch-box-files">services/token.py<br>core/security.py</div>
+      </div>
+      <div class="arch-arrow-h">&#8644;</div>
+      <div class="arch-box">
+        <span class="arch-box-icon">&#128241;</span>
+        <div class="arch-box-label">OTPServices</div>
+        <div class="arch-box-sub">generate / verify OTP</div>
+        <div class="arch-box-files">services/otp.py</div>
+      </div>
+      <div class="arch-arrow-h">&#8644;</div>
+      <div class="arch-box">
+        <span class="arch-box-icon">&#9993;&#65039;</span>
+        <div class="arch-box-label">EmailServices</div>
+        <div class="arch-box-sub">SMTP + Jinja2</div>
+        <div class="arch-box-files">services/mail.py<br>templates/email/</div>
+      </div>
+    </div>
+    <div class="arch-arrow reveal" style="transition-delay:.25s">&#8595; <span class="arch-arrow-label">Parameterized DB queries</span></div>
+
+    <div class="arch-row reveal" style="transition-delay:.3s">
+      <div class="arch-box">
+        <span class="arch-box-icon">&#128196;</span>
+        <div class="arch-box-label">UserRepository</div>
+        <div class="arch-box-files">repositories/<br>user_repository.py</div>
+      </div>
+      <div class="arch-arrow-h">·</div>
+      <div class="arch-box">
+        <span class="arch-box-icon">&#128196;</span>
+        <div class="arch-box-label">TokenRepository</div>
+        <div class="arch-box-files">repositories/<br>token_repository.py</div>
+      </div>
+      <div class="arch-arrow-h">·</div>
+      <div class="arch-box">
+        <span class="arch-box-icon">&#128196;</span>
+        <div class="arch-box-label">OTPRepository</div>
+        <div class="arch-box-files">repositories/<br>otp_repositories.py</div>
+      </div>
+    </div>
+    <div class="arch-arrow reveal" style="transition-delay:.35s">&#8595; <span class="arch-arrow-label">SQL string constants</span></div>
+
+    <div class="arch-row reveal" style="transition-delay:.4s">
+      <div class="arch-box" style="max-width:360px;">
+        <span class="arch-box-icon">&#128203;</span>
+        <div class="arch-box-label">CRUD / SQL Constants</div>
+        <div class="arch-box-sub">Named %s parameterized queries — never string-concatenated</div>
+        <div class="arch-box-files">CRUD/auth.py &nbsp;·&nbsp; CRUD/token.py &nbsp;·&nbsp; CRUD/otp.py</div>
+      </div>
+    </div>
+    <div class="arch-arrow reveal" style="transition-delay:.45s">&#8595; <span class="arch-arrow-label">execute_query / execute_command</span></div>
+
+    <div class="arch-row reveal" style="transition-delay:.5s">
+      <div class="arch-box hl" style="max-width:340px;">
+        <span class="arch-box-icon">&#128279;</span>
+        <div class="arch-box-label">DBConn</div>
+        <div class="arch-box-sub">psycopg2 wrapper · commit / rollback · context manager</div>
+        <div class="arch-box-files">core/database.py</div>
+      </div>
+    </div>
+    <div class="arch-arrow reveal" style="transition-delay:.55s">&#8595; <span class="arch-arrow-label">TCP / SSL (NeonDB)</span></div>
+
+    <div class="arch-row reveal" style="transition-delay:.6s">
+      <div class="arch-box hl-blue" style="max-width:290px;">
+        <span class="arch-box-icon">&#128421;&#65039;</span>
+        <div class="arch-box-label">PostgreSQL — NeonDB</div>
+        <div class="arch-box-sub">4 schemas · views enforce expiry + single-use</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="reveal" style="transition-delay:.65s">
+    <p style="font-size:10px;color:var(--faint);text-align:center;margin-bottom:10px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;">Cross-cutting concerns</p>
+    <div class="side-row">
+      <div class="side-pill"><div class="side-pill-label">Config</div><div class="side-pill-sub">core/config.py<br>DBConfig · SMTPConfig · JWTConfig</div></div>
+      <div class="side-pill"><div class="side-pill-label">Hashing</div><div class="side-pill-sub">utils/hashing.py<br>Argon2 — passwords + OTPs</div></div>
+      <div class="side-pill"><div class="side-pill-label">Exceptions</div><div class="side-pill-sub">exceptions/<br>AppException hierarchy</div></div>
+      <div class="side-pill"><div class="side-pill-label">Logging</div><div class="side-pill-sub">core/logger.py<br>Every layer</div></div>
+      <div class="side-pill"><div class="side-pill-label">Background Tasks</div><div class="side-pill-sub">FastAPI BackgroundTasks<br>Non-blocking email</div></div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══════════════════════════════════════
+     FILE EXPLORER  (graphical interactive)
+══════════════════════════════════════ -->
+<section id="files">
+  <div class="section-label">&#128194; Explorer</div>
+  <h2>File Explorer</h2>
+  <p class="section-desc">Click any folder to expand or collapse. Hover over a file to see its role.</p>
+
+  <div class="reveal">
+  <div class="ftree-wrap">
+
+    <!-- Title bar -->
+    <div class="ftree-titlebar">
+      <div class="ftree-dot r"></div><div class="ftree-dot y"></div><div class="ftree-dot g"></div>
+      <span class="ftree-title">AUTHENTICATION — project root</span>
+    </div>
+
+    <div class="ftree-body" id="ftree-root">
+
+      <!-- ROOT FOLDER (always open) -->
+      <div class="fn open" id="fn-root">
+        <div class="fr" onclick="tog('fn-root')">
+          <div class="fi"></div>
+          <span class="fchev">&#9654;</span>
+          <span class="fic dir">&#128194;</span>
+          <span class="fn-name dir-name">AUTHENTICATION/</span>
+        </div>
+        <div class="fchildren">
+
+          <!-- app.py -->
+          <div class="fn">
+            <div class="fr" style="cursor:default">
+              <div class="fi"><div class="fi-seg last"></div></div>
+              <span style="width:16px;flex-shrink:0"></span>
+              <span class="fic py">PY</span>
+              <span class="fn-name py-name">app.py</span>
+              <span class="ftype py">PY</span>
+              <span class="fdesc-inline">FastAPI app, CORS middleware, exception handlers, route includes</span>
+            </div>
+          </div>
+
+          <!-- handler.py -->
+          <div class="fn">
+            <div class="fr" style="cursor:default">
+              <div class="fi"><div class="fi-seg last"></div></div>
+              <span style="width:16px;flex-shrink:0"></span>
+              <span class="fic py">PY</span>
+              <span class="fn-name py-name">handler.py</span>
+              <span class="ftype py">PY</span>
+              <span class="fdesc-inline">Global exception handlers — Pydantic + AppException → JSON response</span>
+            </div>
+          </div>
+
+          <!-- core/ -->
+          <div class="fn open" id="fn-core">
+            <div class="fr" onclick="tog('fn-core')">
+              <div class="fi"><div class="fi-seg last"></div></div>
+              <span class="fchev">&#9654;</span>
+              <span class="fic dir">&#128194;</span>
+              <span class="fn-name dir-name">core/</span>
+            </div>
+            <div class="fchildren">
+              <div class="fn"><div class="fr" style="cursor:default">
+                <div class="fi"><div class="fi-seg"></div><div class="fi-seg last"></div></div>
+                <span style="width:16px;flex-shrink:0"></span>
+                <span class="fic py">PY</span><span class="fn-name py-name">config.py</span>
+                <span class="ftype py">PY</span>
+                <span class="fdesc-inline">DBConfig · SMTPConfig · JWTConfig — reads from .env</span>
+              </div></div>
+              <div class="fn"><div class="fr" style="cursor:default">
+                <div class="fi"><div class="fi-seg"></div><div class="fi-seg last"></div></div>
+                <span style="width:16px;flex-shrink:0"></span>
+                <span class="fic py">PY</span><span class="fn-name py-name">database.py</span>
+                <span class="ftype py">PY</span>
+                <span class="fdesc-inline">DBConn — psycopg2 wrapper with execute_query / execute_command</span>
+              </div></div>
+              <div class="fn"><div class="fr" style="cursor:default">
+                <div class="fi"><div class="fi-seg"></div><div class="fi-seg last"></div></div>
+                <span style="width:16px;flex-shrink:0"></span>
+                <span class="fic py">PY</span><span class="fn-name py-name">security.py</span>
+                <span class="ftype py">PY</span>
+                <span class="fdesc-inline">create_access_token · verify_token — PyJWT HS256</span>
+              </div></div>
+              <div class="fn"><div class="fr" style="cursor:default">
+                <div class="fi"><div class="fi-seg"></div><div class="fi-seg last"></div></div>
+                <span style="width:16px;flex-shrink:0"></span>
+                <span class="fic py">PY</span><span class="fn-name py-name">SMTP.py</span>
+                <span class="ftype py">PY</span>
+                <span class="fdesc-inline">get_smtp_connection() — aiosmtplib SMTP connection factory</span>
+              </div></div>
+              <div class="fn"><div class="fr" style="cursor:default">
+                <div class="fi"><div class="fi-seg"></div><div class="fi-seg last"></div></div>
+                <span style="width:16px;flex-shrink:0"></span>
+                <span class="fic py">PY</span><span class="fn-name py-name">logger.py</span>
+                <span class="ftype py">PY</span>
+                <span class="fdesc-inline">Shared logger instance used across all layers</span>
+              </div></div>
+            </div>
+          </div>
+
+          <!-- routes/ -->
+          <div class="fn open" id="fn-routes">
+            <div class="fr" onclick="tog('fn-routes')">
+              <div class="fi"><div class="fi-seg last"></div></div>
+              <span class="fchev">&#9654;</span>
+              <span class="fic dir">&#128194;</span>
+              <span class="fn-name dir-name">routes/</span>
+            </div>
+            <div class="fchildren">
+              <div class="fn open" id="fn-rv1">
+                <div class="fr" onclick="tog('fn-rv1')">
+                  <div class="fi"><div class="fi-seg"></div><div class="fi-seg last"></div></div>
+                  <span class="fchev">&#9654;</span>
+                  <span class="fic dir">&#128194;</span>
+                  <span class="fn-name dir-name">v1/</span>
+                </div>
+                <div class="fchildren">
+                  <div class="fn"><div class="fr" style="cursor:default">
+                    <div class="fi"><div class="fi-seg"></div><div class="fi-seg"></div><div class="fi-seg last"></div></div>
+                    <span style="width:16px;flex-shrink:0"></span>
+                    <span class="fic py">PY</span><span class="fn-name py-name">auth.py</span>
+                    <span class="ftype py">PY</span>
+                    <span class="fdesc-inline">All /v1/auth/* endpoints + auth_token_validate dependency</span>
+                  </div></div>
+                </div>
+              </div>
+              <div class="fn open" id="fn-rwp">
+                <div class="fr" onclick="tog('fn-rwp')">
+                  <div class="fi"><div class="fi-seg"></div><div class="fi-seg last"></div></div>
+                  <span class="fchev">&#9654;</span>
+                  <span class="fic dir">&#128194;</span>
+                  <span class="fn-name dir-name">webpage/</span>
+                </div>
+                <div class="fchildren">
+                  <div class="fn"><div class="fr" style="cursor:default">
+                    <div class="fi"><div class="fi-seg"></div><div class="fi-seg"></div><div class="fi-seg last"></div></div>
+                    <span style="width:16px;flex-shrink:0"></span>
+                    <span class="fic py">PY</span><span class="fn-name py-name">webpage.py</span>
+                    <span class="ftype py">PY</span>
+                    <span class="fdesc-inline">/pages/auth/* HTML page routes (set-password, reset-password)</span>
+                  </div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- services/ -->
+          <div class="fn open" id="fn-svc">
+            <div class="fr" onclick="tog('fn-svc')">
+              <div class="fi"><div class="fi-seg last"></div></div>
+              <span class="fchev">&#9654;</span>
+              <span class="fic dir">&#128194;</span>
+              <span class="fn-name dir-name">services/</span>
+              <span class="fdesc-inline" style="opacity:1;color:var(--faint)">Business logic layer</span>
+            </div>
+            <div class="fchildren">
+              <div class="fn"><div class="fr" style="cursor:default">
+                <div class="fi"><div class="fi-seg"></div><div class="fi-seg last"></div></div>
+                <span style="width:16px;flex-shrink:0"></span>
+                <span class="fic py">PY</span><span class="fn-name py-name">auth.py</span>
+                <span class="ftype py">PY</span>
+                <span class="fdesc-inline">signup · set_password · login · 2fa · forgot_password · reset · get_current_user</span>
+              </div></div>
+              <div class="fn"><div class="fr" style="cursor:default">
+                <div class="fi"><div class="fi-seg"></div><div class="fi-seg last"></div></div>
+                <span style="width:16px;flex-shrink:0"></span>
+                <span class="fic py">PY</span><span class="fn-name py-name">token.py</span>
+                <span class="ftype py">PY</span>
+                <span class="fdesc-inline">AccessTokenService — create / validate / revoke JWTs, logs to DB</span>
+              </div></div>
+              <div class="fn"><div class="fr" style="cursor:default">
+                <div class="fi"><div class="fi-seg"></div><div class="fi-seg last"></div></div>
+                <span style="width:16px;flex-shrink:0"></span>
+                <span class="fic py">PY</span><span class="fn-name py-name">otp.py</span>
+                <span class="ftype py">PY</span>
+                <span class="fdesc-inline">OTPServices — generate (Argon2-hashed) and verify 4-digit OTPs</span>
+              </div></div>
+              <div class="fn"><div class="fr" style="cursor:default">
+                <div class="fi"><div class="fi-seg"></div><div class="fi-seg last"></div></div>
+                <span style="width:16px;flex-shrink:0"></span>
+                <span class="fic py">PY</span><span class="fn-name py-name">mail.py</span>
+                <span class="ftype py">PY</span>
+                <span class="fdesc-inline">EmailServices — 6 email types via aiosmtplib + Jinja2 templates</span>
+              </div></div>
+            </div>
+          </div>
+
+          <!-- repositories/ -->
+          <div class="fn" id="fn-repo">
+            <div class="fr" onclick="tog('fn-repo')">
+              <div class="fi"><div class="fi-seg last"></div></div>
+              <span class="fchev">&#9654;</span>
+              <span class="fic dir">&#128194;</span>
+              <span class="fn-name dir-name">repositories/</span>
+              <span class="fdesc-inline" style="opacity:1;color:var(--faint)">DB query execution layer</span>
+            </div>
+            <div class="fchildren">
+              <div class="fn"><div class="fr" style="cursor:default">
+                <div class="fi"><div class="fi-seg"></div><div class="fi-seg last"></div></div>
+                <span style="width:16px;flex-shrink:0"></span>
+                <span class="fic py">PY</span><span class="fn-name py-name">user_repository.py</span>
+                <span class="ftype py">PY</span>
+                <span class="fdesc-inline">UserRepository — check_user_status · onboarding · profile · reset_password</span>
+              </div></div>
+              <div class="fn"><div class="fr" style="cursor:default">
+                <div class="fi"><div class="fi-seg"></div><div class="fi-seg last"></div></div>
+                <span style="width:16px;flex-shrink:0"></span>
+                <span class="fic py">PY</span><span class="fn-name py-name">token_repository.py</span>
+                <span class="ftype py">PY</span>
+                <span class="fdesc-inline">TokenRepository — add · check_valid · mark_as_used</span>
+              </div></div>
+              <div class="fn"><div class="fr" style="cursor:default">
+                <div class="fi"><div class="fi-seg"></div><div class="fi-seg last"></div></div>
+                <span style="width:16px;flex-shrink:0"></span>
+                <span class="fic py">PY</span><span class="fn-name py-name">otp_repositories.py</span>
+                <span class="ftype py">PY</span>
+                <span class="fdesc-inline">OTPRepository — add · check_valid_otp · mark_as_used</span>
+              </div></div>
+            </div>
+          </div>
+
+          <!-- CRUD/ -->
+          <div class="fn" id="fn-crud">
+            <div class="fr" onclick="tog('fn-crud')">
+              <div class="fi"><div class="fi-seg last"></div></div>
+              <span class="fchev">&#9654;</span>
+              <span class="fic dir">&#128194;</span>
+              <span class="fn-name dir-name">CRUD/</span>
+              <span class="fdesc-inline" style="opacity:1;color:var(--faint)">Named SQL string constants (%s parameterized)</span>
+            </div>
+            <div class="fchildren">
+              <div class="fn"><div class="fr" style="cursor:default">
+                <div class="fi"><div class="fi-seg"></div><div class="fi-seg last"></div></div>
+                <span style="width:16px;flex-shrink:0"></span>
+                <span class="fic py">PY</span><span class="fn-name py-name">auth.py</span>
+                <span class="ftype py">PY</span>
+                <span class="fdesc-inline">check_user_status · add_to_pending · final_onboarding · setup_new_password · reset_password</span>
+              </div></div>
+              <div class="fn"><div class="fr" style="cursor:default">
+                <div class="fi"><div class="fi-seg"></div><div class="fi-seg last"></div></div>
+                <span style="width:16px;flex-shrink:0"></span>
+                <span class="fic py">PY</span><span class="fn-name py-name">token.py</span>
+                <span class="ftype py">PY</span>
+                <span class="fdesc-inline">add_to_token_log · check_valid_token · check_valid_token_for_registered_user · mark_as_used</span>
+              </div></div>
+              <div class="fn"><div class="fr" style="cursor:default">
+                <div class="fi"><div class="fi-seg"></div><div class="fi-seg last"></div></div>
+                <span style="width:16px;flex-shrink:0"></span>
+                <span class="fic py">PY</span><span class="fn-name py-name">otp.py</span>
+                <span class="ftype py">PY</span>
+                <span class="fdesc-inline">add_to_otp_log · check_valid_otp · mark_as_used</span>
+              </div></div>
+            </div>
+          </div>
+
+          <!-- schemas/ -->
+          <div class="fn" id="fn-schemas">
+            <div class="fr" onclick="tog('fn-schemas')">
+              <div class="fi"><div class="fi-seg last"></div></div>
+              <span class="fchev">&#9654;</span>
+              <span class="fic dir">&#128194;</span>
+              <span class="fn-name dir-name">schemas/</span>
+              <span class="fdesc-inline" style="opacity:1;color:var(--faint)">Pydantic request/response models</span>
+            </div>
+            <div class="fchildren">
+              <div class="fn"><div class="fr" style="cursor:default"><div class="fi"><div class="fi-seg"></div><div class="fi-seg last"></div></div><span style="width:16px;flex-shrink:0"></span><span class="fic py">PY</span><span class="fn-name py-name">auth.py</span><span class="ftype py">PY</span><span class="fdesc-inline">Signup · Login · SetPassword · ForgotPassword request + response schemas</span></div></div>
+              <div class="fn"><div class="fr" style="cursor:default"><div class="fi"><div class="fi-seg"></div><div class="fi-seg last"></div></div><span style="width:16px;flex-shrink:0"></span><span class="fic py">PY</span><span class="fn-name py-name">base.py</span><span class="ftype py">PY</span><span class="fdesc-inline">ResponseBase · ErrorResponseBase · ErrorDetail</span></div></div>
+              <div class="fn"><div class="fr" style="cursor:default"><div class="fi"><div class="fi-seg"></div><div class="fi-seg last"></div></div><span style="width:16px;flex-shrink:0"></span><span class="fic py">PY</span><span class="fn-name py-name">token.py</span><span class="ftype py">PY</span><span class="fdesc-inline">AuthTokenPayload schema</span></div></div>
+              <div class="fn"><div class="fr" style="cursor:default"><div class="fi"><div class="fi-seg"></div><div class="fi-seg last"></div></div><span style="width:16px;flex-shrink:0"></span><span class="fic py">PY</span><span class="fn-name py-name">otp.py</span><span class="ftype py">PY</span><span class="fdesc-inline">OTPBasedTwoFATokenPayload · OTPVerificationRequestPayload</span></div></div>
+              <div class="fn"><div class="fr" style="cursor:default"><div class="fi"><div class="fi-seg"></div><div class="fi-seg last"></div></div><span style="width:16px;flex-shrink:0"></span><span class="fic py">PY</span><span class="fn-name py-name">validator.py</span><span class="ftype py">PY</span><span class="fdesc-inline">checkValidPasswordPattern · checkValidEmailPattern (Pydantic AfterValidators)</span></div></div>
+            </div>
+          </div>
+
+          <!-- exceptions/ -->
+          <div class="fn" id="fn-exc">
+            <div class="fr" onclick="tog('fn-exc')">
+              <div class="fi"><div class="fi-seg last"></div></div>
+              <span class="fchev">&#9654;</span>
+              <span class="fic dir">&#128194;</span>
+              <span class="fn-name dir-name">exceptions/</span>
+              <span class="fdesc-inline" style="opacity:1;color:var(--faint)">AppException hierarchy</span>
+            </div>
+            <div class="fchildren">
+              <div class="fn"><div class="fr" style="cursor:default"><div class="fi"><div class="fi-seg"></div><div class="fi-seg last"></div></div><span style="width:16px;flex-shrink:0"></span><span class="fic py">PY</span><span class="fn-name py-name">base.py</span><span class="ftype py">PY</span><span class="fdesc-inline">AppException base — msg · status_code · error</span></div></div>
+              <div class="fn"><div class="fr" style="cursor:default"><div class="fi"><div class="fi-seg"></div><div class="fi-seg last"></div></div><span style="width:16px;flex-shrink:0"></span><span class="fic py">PY</span><span class="fn-name py-name">auth.py</span><span class="ftype py">PY</span><span class="fdesc-inline">UserAlreadyExists · UserNotFound · Unauthorized · InternalServerError · PendingNotFound</span></div></div>
+              <div class="fn"><div class="fr" style="cursor:default"><div class="fi"><div class="fi-seg"></div><div class="fi-seg last"></div></div><span style="width:16px;flex-shrink:0"></span><span class="fic py">PY</span><span class="fn-name py-name">token.py</span><span class="ftype py">PY</span><span class="fdesc-inline">InvalidTokenException · ExpiredTokenException</span></div></div>
+              <div class="fn"><div class="fr" style="cursor:default"><div class="fi"><div class="fi-seg"></div><div class="fi-seg last"></div></div><span style="width:16px;flex-shrink:0"></span><span class="fic py">PY</span><span class="fn-name py-name">otp.py</span><span class="ftype py">PY</span><span class="fdesc-inline">InvalidOTPException · OTPExpiredException</span></div></div>
+            </div>
+          </div>
+
+          <!-- utils/ -->
+          <div class="fn" id="fn-utils">
+            <div class="fr" onclick="tog('fn-utils')">
+              <div class="fi"><div class="fi-seg last"></div></div>
+              <span class="fchev">&#9654;</span>
+              <span class="fic dir">&#128194;</span>
+              <span class="fn-name dir-name">utils/</span>
+            </div>
+            <div class="fchildren">
+              <div class="fn"><div class="fr" style="cursor:default"><div class="fi"><div class="fi-seg"></div><div class="fi-seg last"></div></div><span style="width:16px;flex-shrink:0"></span><span class="fic py">PY</span><span class="fn-name py-name">hashing.py</span><span class="ftype py">PY</span><span class="fdesc-inline">hashSecrets() · matchSecrets() — Argon2PasswordHasher</span></div></div>
+              <div class="fn"><div class="fr" style="cursor:default"><div class="fi"><div class="fi-seg"></div><div class="fi-seg last"></div></div><span style="width:16px;flex-shrink:0"></span><span class="fic py">PY</span><span class="fn-name py-name">OTP.py</span><span class="ftype py">PY</span><span class="fdesc-inline">OTP generation utility using secrets.choice</span></div></div>
+            </div>
+          </div>
+
+          <!-- templates/ -->
+          <div class="fn" id="fn-tpl">
+            <div class="fr" onclick="tog('fn-tpl')">
+              <div class="fi"><div class="fi-seg last"></div></div>
+              <span class="fchev">&#9654;</span>
+              <span class="fic dir">&#128194;</span>
+              <span class="fn-name dir-name">templates/</span>
+            </div>
+            <div class="fchildren">
+              <div class="fn" id="fn-tpl-email">
+                <div class="fr" onclick="tog('fn-tpl-email')">
+                  <div class="fi"><div class="fi-seg"></div><div class="fi-seg last"></div></div>
+                  <span class="fchev">&#9654;</span>
+                  <span class="fic dir">&#128194;</span>
+                  <span class="fn-name dir-name">email/</span>
+                  <span class="fdesc-inline" style="opacity:1;color:var(--faint)">6 table-based HTML email templates</span>
+                </div>
+                <div class="fchildren">
+                  <div class="fn"><div class="fr" style="cursor:default"><div class="fi"><div class="fi-seg"></div><div class="fi-seg"></div><div class="fi-seg last"></div></div><span style="width:16px;flex-shrink:0"></span><span class="fic html">HT</span><span class="fn-name html-name">set_password_email.html</span><span class="ftype html">HTML</span><span class="fdesc-inline">Account activation link email</span></div></div>
+                  <div class="fn"><div class="fr" style="cursor:default"><div class="fi"><div class="fi-seg"></div><div class="fi-seg"></div><div class="fi-seg last"></div></div><span style="width:16px;flex-shrink:0"></span><span class="fic html">HT</span><span class="fn-name html-name">otp_2fa.html</span><span class="ftype html">HTML</span><span class="fdesc-inline">2FA OTP code email with digit boxes</span></div></div>
+                  <div class="fn"><div class="fr" style="cursor:default"><div class="fi"><div class="fi-seg"></div><div class="fi-seg"></div><div class="fi-seg last"></div></div><span style="width:16px;flex-shrink:0"></span><span class="fic html">HT</span><span class="fn-name html-name">TwoFA_base.html</span><span class="ftype html">HTML</span><span class="fdesc-inline">Magic link 2FA confirmation email</span></div></div>
+                  <div class="fn"><div class="fr" style="cursor:default"><div class="fi"><div class="fi-seg"></div><div class="fi-seg"></div><div class="fi-seg last"></div></div><span style="width:16px;flex-shrink:0"></span><span class="fic html">HT</span><span class="fn-name html-name">reset_password.html</span><span class="ftype html">HTML</span><span class="fdesc-inline">Password reset link email</span></div></div>
+                  <div class="fn"><div class="fr" style="cursor:default"><div class="fi"><div class="fi-seg"></div><div class="fi-seg"></div><div class="fi-seg last"></div></div><span style="width:16px;flex-shrink:0"></span><span class="fic html">HT</span><span class="fn-name html-name">password_reset_success.html</span><span class="ftype html">HTML</span><span class="fdesc-inline">Password changed confirmation + security alert</span></div></div>
+                  <div class="fn"><div class="fr" style="cursor:default"><div class="fi"><div class="fi-seg"></div><div class="fi-seg"></div><div class="fi-seg last"></div></div><span style="width:16px;flex-shrink:0"></span><span class="fic html">HT</span><span class="fn-name html-name">successful_account_creation.html</span><span class="ftype html">HTML</span><span class="fdesc-inline">Welcome email with account details</span></div></div>
+                </div>
+              </div>
+              <div class="fn" id="fn-tpl-wp">
+                <div class="fr" onclick="tog('fn-tpl-wp')">
+                  <div class="fi"><div class="fi-seg"></div><div class="fi-seg last"></div></div>
+                  <span class="fchev">&#9654;</span>
+                  <span class="fic dir">&#128194;</span>
+                  <span class="fn-name dir-name">webpage/</span>
+                </div>
+                <div class="fchildren">
+                  <div class="fn"><div class="fr" style="cursor:default"><div class="fi"><div class="fi-seg"></div><div class="fi-seg"></div><div class="fi-seg last"></div></div><span style="width:16px;flex-shrink:0"></span><span class="fic html">HT</span><span class="fn-name html-name">set_password.html</span><span class="ftype html">HTML</span><span class="fdesc-inline">Interactive set-password form page (opened from email link)</span></div></div>
+                  <div class="fn"><div class="fr" style="cursor:default"><div class="fi"><div class="fi-seg"></div><div class="fi-seg"></div><div class="fi-seg last"></div></div><span style="width:16px;flex-shrink:0"></span><span class="fic html">HT</span><span class="fn-name html-name">reset_password.html</span><span class="ftype html">HTML</span><span class="fdesc-inline">Interactive reset-password form page</span></div></div>
+                  <div class="fn"><div class="fr" style="cursor:default"><div class="fi"><div class="fi-seg"></div><div class="fi-seg"></div><div class="fi-seg last"></div></div><span style="width:16px;flex-shrink:0"></span><span class="fic html">HT</span><span class="fn-name html-name">token-expire.html</span><span class="ftype html">HTML</span><span class="fdesc-inline">Error page shown when token is expired/invalid</span></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- documentation/ -->
+          <div class="fn" id="fn-docs">
+            <div class="fr" onclick="tog('fn-docs')">
+              <div class="fi"><div class="fi-seg last"></div></div>
+              <span class="fchev">&#9654;</span>
+              <span class="fic dir">&#128194;</span>
+              <span class="fn-name dir-name">documentation/</span>
+            </div>
+            <div class="fchildren">
+              <div class="fn"><div class="fr" style="cursor:default"><div class="fi"><div class="fi-seg"></div><div class="fi-seg last"></div></div><span style="width:16px;flex-shrink:0"></span><span class="fic md">MD</span><span class="fn-name md-name">API_DOCS.md</span><span class="ftype md">MD</span><span class="fdesc-inline">Full API reference — endpoints, shapes, error codes, flow diagrams</span></div></div>
+              <div class="fn"><div class="fr" style="cursor:default"><div class="fi"><div class="fi-seg"></div><div class="fi-seg last"></div></div><span style="width:16px;flex-shrink:0"></span><span class="fic md">MD</span><span class="fn-name md-name">DB_DESIGN.md</span><span class="ftype md">MD</span><span class="fdesc-inline">Database schema, ERD, DDLs, views, design notes</span></div></div>
+              <div class="fn"><div class="fr" style="cursor:default"><div class="fi"><div class="fi-seg"></div><div class="fi-seg last"></div></div><span style="width:16px;flex-shrink:0"></span><span class="fic md">MD</span><span class="fn-name md-name">SQL_DOCS.md</span><span class="ftype md">MD</span><span class="fdesc-inline">Every SQL query with parameters and endpoint mapping</span></div></div>
+              <div class="fn"><div class="fr" style="cursor:default"><div class="fi"><div class="fi-seg"></div><div class="fi-seg last"></div></div><span style="width:16px;flex-shrink:0"></span><span class="fic html">HT</span><span class="fn-name html-name">architecture.html</span><span class="ftype html">HTML</span><span class="fdesc-inline">← This file — interactive architecture visualization</span></div></div>
+            </div>
+          </div>
+
+          <!-- Root files -->
+          <div class="fn"><div class="fr" style="cursor:default"><div class="fi"><div class="fi-seg last"></div></div><span style="width:16px;flex-shrink:0"></span><span class="fic py">PY</span><span class="fn-name py-name">test.py</span><span class="ftype py">PY</span><span class="fdesc-inline">60 pytest integration tests — 10 classes covering all endpoints</span></div></div>
+          <div class="fn"><div class="fr" style="cursor:default"><div class="fi"><div class="fi-seg last"></div></div><span style="width:16px;flex-shrink:0"></span><span class="fic cfg">CF</span><span class="fn-name cfg-name">.env.example</span><span class="ftype cfg">ENV</span><span class="fdesc-inline">All environment variable templates with descriptions</span></div></div>
+          <div class="fn"><div class="fr" style="cursor:default"><div class="fi"><div class="fi-seg last"></div></div><span style="width:16px;flex-shrink:0"></span><span class="fic cfg">CF</span><span class="fn-name cfg-name">pyproject.toml</span><span class="ftype cfg">TOML</span><span class="fdesc-inline">uv-managed project config, dependencies, dev deps</span></div></div>
+          <div class="fn"><div class="fr" style="cursor:default"><div class="fi"><div class="fi-seg last"></div></div><span style="width:16px;flex-shrink:0"></span><span class="fic md">MD</span><span class="fn-name md-name">README.md</span><span class="ftype md">MD</span><span class="fdesc-inline">Project overview, setup guide, env vars table, quick start</span></div></div>
+
+        </div><!-- /root fchildren -->
+      </div><!-- /root fn -->
+    </div><!-- /ftree-body -->
+  </div><!-- /ftree-wrap -->
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── Endpoints ── -->
+<section id="endpoints">
+  <div class="section-label">&#128640; Endpoints</div>
+  <h2>API Endpoints</h2>
+  <p class="section-desc">Click any row to expand. Base prefix: <code style="color:var(--green-l);font-size:12px;">/v1/auth</code></p>
+
+  <div class="reveal">
+  <div style="margin-bottom:24px">
+    <div class="ep-group-title">Signup</div>
+    <div class="ep-card" onclick="toggleEp(this)"><div class="ep-head"><span class="method m-POST">POST</span><span class="ep-path">/v1/auth/signup</span><span class="ep-desc">Register new user</span><span class="sbadge s201">201</span></div><div class="ep-body"><p>Saves to pending_user_registration, generates SIGN_UP JWT, sends activation email (background task).</p><div class="info-grid"><div class="info-block"><div class="info-block-title">Body</div><code>first_name  (min 3)<br>last_name   (min 3)<br>email       (@)<br>phone       (10 digits)<br>country_cd  (+XX)<br>role_type   user|admin|guest</code></div><div class="info-block"><div class="info-block-title">Errors</div><div class="err-list"><span class="eb e409">409 Conflict</span><span class="eb e422">422 Validation</span><span class="eb e500">500 Server</span></div></div></div></div></div>
+    <div class="ep-card" onclick="toggleEp(this)"><div class="ep-head"><span class="method m-POST">POST</span><span class="ep-path">/v1/auth/signup/set-password</span><span class="ep-desc">Activate account</span><span class="sbadge s201">201</span></div><div class="ep-body"><p>Requires SIGN_UP JWT in Authorization header. Two-step transaction: inserts into user_details then security_details. 2FA enabled by default.</p><div class="info-grid"><div class="info-block"><div class="info-block-title">Header + Body</div><code>Authorization: Bearer &lt;SIGN_UP token&gt;<br>new_password<br>confirm_new_password</code></div><div class="info-block"><div class="info-block-title">Errors</div><div class="err-list"><span class="eb e401">401 Invalid Token</span><span class="eb e404">404 Pending NF</span><span class="eb e422">422 Password</span></div></div></div></div></div>
+  </div>
+
+  <div style="margin-bottom:24px">
+    <div class="ep-group-title">Login</div>
+    <div class="ep-card" onclick="toggleEp(this)"><div class="ep-head"><span class="method m-POST">POST</span><span class="ep-path">/v1/auth/otp/login</span><span class="ep-desc">Authenticate + trigger 2FA</span><span class="sbadge s200">200</span></div><div class="ep-body"><p>Credential can be by email, phone (+ country_cd), or user_id. If 2FA enabled returns challenge_token + sends OTP email. If disabled returns session token directly.</p><div class="info-grid"><div class="info-block"><div class="info-block-title">Body</div><code>credential: { email } OR<br>            { country_cd, phone } OR<br>            { user_id }<br>password</code></div><div class="info-block"><div class="info-block-title">Response (2FA on)</div><code>mode: "otp"<br>challenge_token: "…"</code><div class="info-block-title" style="margin-top:8px">Errors</div><div class="err-list"><span class="eb e401">401 Bad Creds</span><span class="eb e404">404 Not Found</span><span class="eb e422">422</span></div></div></div></div></div>
+    <div class="ep-card" onclick="toggleEp(this)"><div class="ep-head"><span class="method m-POST">POST</span><span class="ep-path">/v1/auth/otp/login/2fa_verify</span><span class="ep-desc">Complete 2FA</span><span class="sbadge s200">200</span></div><div class="ep-body"><p>Decodes challenge_token → extracts otp_id → DB lookup → Argon2 verify → marks OTP used → issues session JWT + sets Authorization cookie.</p><div class="info-grid"><div class="info-block"><div class="info-block-title">Body</div><code>challenge_token<br>otp (4 digits)</code></div><div class="info-block"><div class="info-block-title">Response</div><code>token (session JWT)</code><div class="err-list" style="margin-top:8px"><span class="eb e401">401 Invalid OTP</span><span class="eb e401">401 OTP Expired</span></div></div></div></div></div>
+  </div>
+
+  <div style="margin-bottom:24px">
+    <div class="ep-group-title">Session</div>
+    <div class="ep-card" onclick="toggleEp(this)"><div class="ep-head"><span class="method m-POST">POST</span><span class="ep-path">/v1/auth/me</span><span class="ep-desc">Get current user profile</span><span class="sbadge s200">200</span></div><div class="ep-body"><p>Validates LOGIN_SESSION JWT. Checks token is unexpired + unused + belongs to active non-deleted user via JOIN of token_transaction_log_vw + user_profile.</p><div class="info-grid"><div class="info-block"><div class="info-block-title">Header</div><code>Authorization: Bearer &lt;session token&gt;</code></div><div class="info-block"><div class="info-block-title">Response</div><code>user_id, email, first_name<br>last_name, full_name, phone<br>country_cd, role_type<br>is_active, is_2fa_enabled</code></div></div></div></div>
+    <div class="ep-card" onclick="toggleEp(this)"><div class="ep-head"><span class="method m-DELETE">DELETE</span><span class="ep-path">/v1/auth/logout</span><span class="ep-desc">Invalidate session</span><span class="sbadge s200">200</span></div><div class="ep-body"><p>Marks session token as used (single-use enforcement). Clears Authorization cookie. Always returns 200 — even with no token or garbage token.</p></div></div>
+  </div>
+
+  <div style="margin-bottom:24px">
+    <div class="ep-group-title">Password Reset</div>
+    <div class="ep-card" onclick="toggleEp(this)"><div class="ep-head"><span class="method m-POST">POST</span><span class="ep-path">/v1/auth/forgot-password</span><span class="ep-desc">Request reset link</span><span class="sbadge s202">202</span></div><div class="ep-body"><p>Issues PASSWORD_RESET JWT and sends reset email. Response is intentionally vague (always 202) to prevent email enumeration.</p><div class="info-grid"><div class="info-block"><div class="info-block-title">Body</div><code>credential: { email } OR<br>            { country_cd, phone } OR<br>            { user_id }</code></div><div class="info-block"><div class="info-block-title">Errors</div><div class="err-list"><span class="eb e404">404 Not Found</span><span class="eb e422">422 Validation</span></div></div></div></div></div>
+    <div class="ep-card" onclick="toggleEp(this)"><div class="ep-head"><span class="method m-POST">POST</span><span class="ep-path">/v1/auth/reset-password</span><span class="ep-desc">Set new password</span><span class="sbadge s200">200</span></div><div class="ep-body"><p>Requires PASSWORD_RESET JWT. Validates token (unexpired + unused + active user). Updates Argon2 hash in security_details. Marks token used. Sends success email.</p><div class="info-grid"><div class="info-block"><div class="info-block-title">Header + Body</div><code>Authorization: Bearer &lt;PASSWORD_RESET token&gt;<br>new_password<br>confirm_new_password</code></div><div class="info-block"><div class="info-block-title">Errors</div><div class="err-list"><span class="eb e401">401 Token</span><span class="eb e422">422 Password</span></div></div></div></div></div>
+  </div>
+  </div>
+</section>
+
+<!-- ── Response Shape ── -->
+<section id="response">
+  <div class="section-label">&#128203; Contract</div>
+  <h2>Universal Response Shape</h2>
+  <p class="section-desc">Every API response follows one of exactly two shapes. No exceptions.</p>
+  <div class="reveal">
+  <div class="shape-grid">
+    <div class="shape-card"><h4>&#9989; Success</h4><pre>{
+  <span class="k">"msg"</span>:     <span class="vs">"Human readable"</span>,
+  <span class="k">"success"</span>: <span class="vb">true</span>,
+  <span class="k">"code"</span>:    <span class="vb">200</span>,
+  <span class="k">"error"</span>:   <span class="vn">null</span>,
+  <span class="k">"data"</span>:    { ... }
+}</pre></div>
+    <div class="shape-card"><h4>&#10060; Error</h4><pre>{
+  <span class="k">"msg"</span>:     <span class="vs">"Human readable"</span>,
+  <span class="k">"success"</span>: <span class="vn">false</span>,
+  <span class="k">"code"</span>:    <span class="vb">422</span>,
+  <span class="k">"error"</span>: {
+    <span class="k">"issue"</span>:   <span class="vs">"Validation Failed"</span>,
+    <span class="k">"details"</span>: [ ... ] <span style="color:var(--faint)">or null</span>
+  },
+  <span class="k">"data"</span>: <span class="vn">null</span>
+}</pre></div>
+  </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── Database ── -->
+<section id="database">
+  <div class="section-label">&#128421;&#65039; Database</div>
+  <h2>Database Schema</h2>
+  <p class="section-desc">4 PostgreSQL schemas. The app only reads through views — which enforce expiry and single-use constraints centrally.</p>
+  <div class="reveal">
+  <div class="db-grid">
+    <div class="db-card"><div class="db-head"><span class="db-schema">auth</span><span class="db-type t-table">Tables</span></div><div class="db-items">
+      <div class="db-item"><div class="db-item-name">user_details</div><div class="db-item-desc">Active users. <span class="pk">PK</span> uuid. Unique: user_id, email, phone. Soft delete via is_deleted. is_active flag.</div></div>
+      <div class="db-item"><div class="db-item-name">pending_user_registration</div><div class="db-item-desc">Signup staging. Expires in 15 min. token_id soft-links to token log. No FK to user_details.</div></div>
+      <div class="db-item"><div class="db-item-name">security_details</div><div class="db-item-desc">hashed_password, is_2fa_enabled, is_email_verified. <span class="fk">FK</span>→user_details(user_id) CASCADE.</div></div>
+    </div></div>
+    <div class="db-card"><div class="db-head"><span class="db-schema">auth_views</span><span class="db-type t-view">Views</span></div><div class="db-items">
+      <div class="db-item"><div class="db-item-name">user_profile</div><div class="db-item-desc">JOIN user_details + security_details. Filters is_deleted=false. Computes full_name. Primary read surface.</div></div>
+      <div class="db-item"><div class="db-item-name">pending_user_registration_vw</div><div class="db-item-desc">Filters to: expires_at &gt; now() AND is_token_used = false. Only actionable signups.</div></div>
+    </div></div>
+    <div class="db-card"><div class="db-head"><span class="db-schema">services</span><span class="db-type t-table">Tables</span></div><div class="db-items">
+      <div class="db-item"><div class="db-item-name">token_transaction_log</div><div class="db-item-desc"><span class="pk">PK</span> token_id (embedded in JWT). action=purpose. is_token_used for single-use. No FK to auth.</div></div>
+      <div class="db-item"><div class="db-item-name">otp_transaction_log</div><div class="db-item-desc">hashed_otp (Argon2). is_used flag. Expires 5 min DB / 15 min user-facing. No FK to auth.</div></div>
+    </div></div>
+    <div class="db-card"><div class="db-head"><span class="db-schema">services_views</span><span class="db-type t-view">Views</span></div><div class="db-items">
+      <div class="db-item"><div class="db-item-name">token_transaction_log_vw</div><div class="db-item-desc">Only active: expires_at &gt; now() AND is_token_used = false. Used by all check_valid_token queries.</div></div>
+      <div class="db-item"><div class="db-item-name">otp_transaction_log_vw</div><div class="db-item-desc">Only active: expires_at &gt; now() AND is_used = false. Used by check_valid_otp.</div></div>
+    </div></div>
+  </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── Flows ── -->
+<section id="flow-signup">
+  <div class="section-label">&#128100; Flows</div>
+  <h2>Auth Flows</h2>
+  <p class="section-desc">Step-by-step walkthrough of every major user journey.</p>
+
+  <div class="reveal" style="margin-bottom:40px">
+    <p style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:16px;display:flex;align-items:center;gap:10px;"><span style="background:var(--green-dim);border:1px solid var(--border);border-radius:6px;padding:3px 9px;font-size:11px;color:var(--green-l);">1</span> New User Signup</p>
+    <div class="flow-steps">
+      <div class="flow-step"><div class="step-num">API</div><div><div class="step-title">POST /v1/auth/signup</div><div class="step-desc">Validates payload. Checks user status (ACTIVE→409, PENDING/NEW→continue).</div></div></div>
+      <div class="flow-step s-db"><div class="step-num">DB</div><div><div class="step-title">Insert into pending_user_registration</div><div class="step-desc">Pre-assigned user_id generated. SIGN_UP JWT created and stored in token_transaction_log.</div></div></div>
+      <div class="flow-step s-email"><div class="step-num">EMAIL</div><div><div class="step-title">Activation email sent (background task)</div><div class="step-desc">Link: /pages/auth/set-password?token=&lt;JWT&gt;. Expires in 15 minutes.</div></div></div>
+      <div class="flow-step s-db"><div class="step-num">DB</div><div><div class="step-title">POST /v1/auth/signup/set-password</div><div class="step-desc">Argon2 hash stored. Transaction: final_onboarding (user_details) → setup_new_password (security_details). Token + pending row marked used.</div><div class="step-code">INSERT user_details → INSERT security_details → COMMIT</div></div></div>
+      <div class="flow-step s-end"><div class="step-num">DONE</div><div><div class="step-title">Account active — 2FA enabled by default</div><div class="step-desc">Returns user_id + email. Redirect to login.</div></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="flow-login">
+  <div class="reveal" style="margin-bottom:40px">
+    <p style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:16px;display:flex;align-items:center;gap:10px;"><span style="background:var(--green-dim);border:1px solid var(--border);border-radius:6px;padding:3px 9px;font-size:11px;color:var(--green-l);">2</span> Login with OTP 2FA</p>
+    <div class="flow-steps">
+      <div class="flow-step"><div class="step-num">API</div><div><div class="step-title">POST /v1/auth/otp/login</div><div class="step-desc">Credential resolved (email / phone / user_id). Password Argon2-verified against stored hash.</div></div></div>
+      <div class="flow-step s-db"><div class="step-num">DB</div><div><div class="step-title">Fetch user_profile from auth_views</div><div class="step-desc">View returns active, non-deleted user. is_active checked at application layer.</div></div></div>
+      <div class="flow-step s-email"><div class="step-num">OTP</div><div><div class="step-title">4-digit OTP generated + emailed (background)</div><div class="step-desc">OTP Argon2-hashed and stored in otp_transaction_log. challenge_token JWT returned.</div><div class="step-code">returns: { mode:"otp", challenge_token:"…" }</div></div></div>
+      <div class="flow-step"><div class="step-num">API</div><div><div class="step-title">POST /v1/auth/otp/login/2fa_verify</div><div class="step-desc">challenge_token decoded → otp_id extracted → DB lookup → Argon2 verify. OTP marked used.</div></div></div>
+      <div class="flow-step s-end"><div class="step-num">DONE</div><div><div class="step-title">Session token issued</div><div class="step-desc">LOGIN_SESSION JWT in body + Authorization cookie set. Token stored in token_transaction_log. Single-use.</div></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="flow-reset">
+  <div class="reveal">
+    <p style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:16px;display:flex;align-items:center;gap:10px;"><span style="background:var(--green-dim);border:1px solid var(--border);border-radius:6px;padding:3px 9px;font-size:11px;color:var(--green-l);">3</span> Forgot Password</p>
+    <div class="flow-steps">
+      <div class="flow-step"><div class="step-num">API</div><div><div class="step-title">POST /v1/auth/forgot-password</div><div class="step-desc">Credential resolved. User fetched from auth_views.user_profile.</div></div></div>
+      <div class="flow-step s-db"><div class="step-num">DB</div><div><div class="step-title">PASSWORD_RESET token created</div><div class="step-desc">JWT stored in token_transaction_log. Expiry 15 minutes.</div></div></div>
+      <div class="flow-step s-email"><div class="step-num">EMAIL</div><div><div class="step-title">Reset link sent (background task)</div><div class="step-desc">Always 202 — response is vague to prevent email enumeration.</div></div></div>
+      <div class="flow-step s-db"><div class="step-num">DB</div><div><div class="step-title">POST /v1/auth/reset-password</div><div class="step-desc">Token validated (unexpired, unused, active user). Argon2 hash updated in security_details. Token marked used.</div><div class="step-code">UPDATE auth.security_details … RETURNING last_updated</div></div></div>
+      <div class="flow-step s-end"><div class="step-num">DONE</div><div><div class="step-title">Password updated — success email sent</div><div class="step-desc">Confirmation email with timestamp dispatched as background task.</div></div></div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<script>
+  /* ── Folder toggle ── */
+  function tog(id) {
+    const node = document.getElementById(id);
+    if (!node) return;
+    node.classList.toggle('open');
+  }
+
+  /* ── Endpoint toggle ── */
+  function toggleEp(card) {
+    card.querySelector('.ep-body').classList.toggle('open');
+  }
+
+  /* ── Scroll reveal ── */
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+        io.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.08 });
+
+  document.querySelectorAll('.reveal, .reveal-left').forEach(el => io.observe(el));
+
+  /* ── Counter animation ── */
+  function animateCount(el) {
+    const target = +el.dataset.count;
+    const dur = 1200;
+    const step = 16;
+    const inc = target / (dur / step);
+    let cur = 0;
+    const t = setInterval(() => {
+      cur = Math.min(cur + inc, target);
+      el.textContent = Math.floor(cur);
+      if (cur >= target) clearInterval(t);
+    }, step);
+  }
+
+  const cio = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.querySelectorAll('[data-count]').forEach(animateCount);
+        cio.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.3 });
+  document.querySelectorAll('.stats-grid').forEach(el => cio.observe(el));
+
+  /* ── Active nav on scroll ── */
+  const sections = document.querySelectorAll('section[id]');
+  const links    = document.querySelectorAll('.nav-link');
+  const sio = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(l => l.classList.toggle('active', l.getAttribute('href') === '#' + e.target.id));
+      }
+    });
+  }, { rootMargin: '-30% 0px -60% 0px' });
+  sections.forEach(s => sio.observe(s));
+
+  /* ── Stagger arch boxes ── */
+  document.querySelectorAll('.arch-row').forEach((row, i) => {
+    row.style.transitionDelay = (i * 0.07) + 's';
+  });
+</script>
+</body>
+</html>

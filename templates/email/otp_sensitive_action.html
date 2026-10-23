@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block content %}
+<p>Hi <strong>{{ name }}</strong>,</p>
+<p>A <strong>sensitive action</strong> was requested on your account. Use this OTP to confirm.</p>
+<div class="otp-box">{{ otp }}</div>
+<p class="expiry">Expires in {{ expiry }} minutes</p>
+<p class="warning">⚠️ If this wasn't you, change your password immediately.</p>
+{% endblock %}
